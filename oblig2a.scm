@@ -17,6 +17,7 @@
 (define (p-cdr proc)
   (proc (lambda (x y) y)))
 
+
 ;; b
 
 (define foo 42)
@@ -34,17 +35,40 @@
     (list bar baz) baz ))
  foo 'towel) ;; evaluerer til (towel (42 towel))
 
+
 ;; c
 
 (define (infix-eval exp) 
-  (let ((operand1  (car exp))
-        (operator (cadr exp))
+  (let ((operand1  (car exp)) ;; henter ut hvert element
+        (operator (cadr exp)) ;; og legger det til en variabel
         (operand2 (caddr exp)))
-    (operator operand1 operand2)))
+    (operator operand1 operand2))) ;; evaluerer med prefix notasjon
 
-(define foo (list 21 + 21))
+(define foo (list 21 + 21)) ;; tester
 (define baz (list 21 list 21))
 (define bar (list 84 / 2))
 (infix-eval foo) 
 (infix-eval baz) 
 (infix-eval bar)
+
+
+;; d
+
+;; resultatet blir en feilmelding, 'not a procedure'.
+;; dette er fordi '() behandler hvert element som konstanter uten å evaluere,
+;; mens list funksjonen evaluerer hvert element før den lager en liste
+;; altså med '() blir elementene sett på som symboler mens i list
+;; evalueres det til variabler
+;; '(+ 1 2) -> (+ 1 2) mens (list (+ 1 2)) -> (3)
+
+
+
+
+
+
+
+
+
+
+
+
