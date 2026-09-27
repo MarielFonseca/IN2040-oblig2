@@ -21,27 +21,18 @@
 
 (define foo 42)
 
-((lambda (x y)
+((lambda (x y) 
    (if (= x y)
        'same
        'different))
- 5 foo)
+ 5 foo) ;; evaluerer til 'different'
 
-;; FEIL:
-#|((lambda (bar baz)
-   (lambda (x y)
-     (foo)
-     (list foo bar)))
-foo 'towel
- )
 
 ((lambda (bar baz)
-   (lambda (x y)
-     (list foo bar)baz))
-foo 'towel
- )
-
-|#
+   ((lambda (bar foo)
+      (list foo bar))
+    (list bar baz) baz ))
+ foo 'towel) ;; evaluerer til (towel (42 towel))
 
 ;; c
 
