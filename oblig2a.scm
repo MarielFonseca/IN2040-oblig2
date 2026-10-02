@@ -2,68 +2,6 @@
 ;; Kany Gilly Sleyman - kanygs
 ;; Mariel Tavares Fonseca - marieltf
 
-(define (make-leaf symbol weight)
-  (list 'leaf symbol weight))
-
-(define (leaf? object)
-  (eq? (car object) 'leaf))
-
-(define (symbol-leaf x) (cadr x))
-
-(define (weight-leaf x) (caddr x))
-
-(define (make-code-tree left right)
-  (list left
-        right
-        (append (symbols left) (symbols right))
-        (+ (weight left) (weight right))))
-
-(define (left-branch tree) (car tree))
-
-(define (right-branch tree) (cadr tree))
-
-(define (symbols tree)
-  (if (leaf? tree)
-      (list (symbol-leaf tree))
-      (caddr tree)))
-
-(define (weight tree)
-  (if (leaf? tree)
-      (weight-leaf tree)
-      (cadddr tree)))
-
-(define (choose-branch bit branch)
-  (if (= bit 0) 
-      (left-branch branch)
-      (right-branch branch)))
-(define (adjoin-set x set)
-  (cond ((null? set) (list x))
-        ((< (weight x) (weight (car set))) (cons x set))
-        (else (cons (car set)
-                    (adjoin-set x (cdr set))))))
-
-(define (make-leaf-set pairs)
-  (if (null? pairs)
-      '()
-      (let ((pair (car pairs)))
-        (adjoin-set (make-leaf (car pair)
-                               (cadr pair))
-                    (make-leaf-set (cdr pairs))))))
-
-(define sample-tree
-  (make-code-tree
-   (make-code-tree
-    (make-leaf 'fight 6)
-    (make-leaf 'ninjas 5))
-   (make-code-tree
-    (make-leaf 'samurais 4)
-    (make-code-tree
-     (make-leaf 'night 2)
-     (make-leaf 'by 1)))))
-
-(define sample-code '(1 0 0 0 0 1 1 1 1 1 1 0))
-
-
 ;; oppgave 1a
 
 (define (p-cons x y)
@@ -74,12 +12,6 @@
 
 (define (p-cdr proc)
   (proc (lambda (x y) y)))
-
-;; tester
-(p-cons "foo" "bar")
-(p-car (p-cons "foo" "bar"))
-(p-cdr (p-cons "foo" "bar"))
-(p-car (p-cdr (p-cons "zoo" (p-cons "foo" "bar"))))
 
 
 ;; oppgave 1b
@@ -112,13 +44,6 @@
         (operand2 (caddr exp)))
     (operator operand1 operand2))) ;; evaluerer med prefix notasjon
 
-(define foo (list 21 + 21)) ;; tester
-(define baz (list 21 list 21))
-(define bar (list 84 / 2))
-(infix-eval foo) 
-(infix-eval baz) 
-(infix-eval bar)
-
 
 ;; oppgave 1d
 
@@ -130,7 +55,7 @@
 ;; '(+ 1 2) -> (+ 1 2) mens (list (+ 1 2)) -> (3)
 
 
-;;oppgave 2 a
+;;oppgave 2a
 (define (decode bits tree)
   (define (decode-1 bits current-branch acc)
     (if (null? bits)
@@ -142,8 +67,6 @@
               (decode-1 (cdr bits) next-branch acc)))))
   (reverse (decode-1 bits tree '())))
 
-;;test code
-(decode sample-code sample-tree)
 
 ;; oppgave 2b
 ;; resultatet blir: (samurais fight ninjas by night)
@@ -159,24 +82,71 @@
 
 (define (encode-symbol symbol tree)
   (cond ((leaf? tree)
-         (if (equal? symbol (symbol-leaf tree))
+         (if (eq? symbol (symbol-leaf tree))
              '()
-             #f))
+             (error "Symbol is not in the tree" symbol)))
+        ((memq symbol (symbols (left-branch tree)))
+         (cons 0 (encode-symbol symbol (left-branch tree))))
+        ((memq symbol (symbols (right-branch tree)))
+         (cons 1 (encode-symbol symbol (right-branch tree))))
         (else
-         (let ((left-code
-                (encode-symbol symbol (left-branch tree))))
-           (if left-code
-               (cons 0 left-code)
-               (let ((right-code
-                      (encode-symbol symbol (right-branch tree))))
-                 (if right-code
-                     (cons 1 right-code)
-                     ("Symbol is not in the tree"))))))))
+         (error "Symbol is not in the tree" symbol))))
 
-
-(decode (encode '(ninjas fight ninjas) sample-tree) sample-tree)
 
 ;; oppgave 2d
 
+(define (grow-huffman-tree freqs)
+  (define (growing-tree trees)
+    (cond ((null? (cdr trees))  ;;base case: when there is only one element left, the root
+           (car trees))
+          (else (let* ((left (car trees))
+                       (right (cadr trees))
+                       (subtree (make-code-tree left right))
+                       (remaining (cddr trees)))               
+                  (growing-tree (adjoin-set subtree remaining))))))
+  (growing-tree (make-leaf-set freqs)))
+
 
 ;; oppgave 2e
+#|
+1.
+ninjas fight: 6 bits
+ninjas fight ninjas: 9 bits
+ninjas fight samurais: 7 bits
+samurais fight: 4 bits
+samurais fight ninjas: 7 bits
+ninjas fight by night: 14 bits
+
+2.
+45 / 6 = 7.5
+Gjennomsnittelig lengde på kodeordene gitt er 7.5 bits
+
+3.
+For å regne hvor langt hver kodeord blir med fixed-length, brukte vi:
+log_b n, hvor b er antall unike symboler/bits,
+og n er antall bokstaver i alfabetet.
+Vi fikk derfor log_2 16 = 4
+Det betyr at hvert ord vil fast ha 4 bits.
+
+Med fixed length:
+ninjas fight: 8 bits
+ninjas fight ninjas: 12 bits
+ninjas fight samurais: 12 bits
+samurais fight: 8 bits
+samurais fight ninjas: 12 bits
+ninjas fight by night: 16 bits
+
+På gjennomsnitt, vil fixed-length ha lengere bitstreng for å formulere samme setning. 
+|#
+
+
+;; oppgave 2f
+
+(define (huffman-leaves tree) ;; traversere hele treet, finne løvnoder og legg løvnodene i en acc (liste)
+  (define (huff-leaves subtree acc)
+    (if (leaf? subtree)
+        (cons (list (symbol-leaf subtree)
+                    (weight-leaf subtree)) acc)
+        (let ((right-result (huff-leaves (right-branch subtree) acc)))
+          (huff-leaves (left-branch subtree) right-result))))  ;;legger til resultatet fra venstre side inn til høyre side
+  (huff-leaves tree '()))
